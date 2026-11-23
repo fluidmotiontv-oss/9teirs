@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fluid Motion TV | Dragon 9 Sovereign Aquarium Theater</title>
+    <!-- Three.js & Post-Processing Bloom -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <style>
+        :root {
+            --bg-abyss: #010a0f;
+            --aqua-cyan: #00f3ff;
+            --fern-emerald: #00ff88;
+            --neon-gold: #ffd700;
+            --glass-bg: rgba(4, 20, 28, 0.72);
+            --glass-border: rgba(0, 243, 255, 0.28);
+            --text-main: #eafaf8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-abyss);
+            color: var(--text-main);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* 3D WebGL Aquarium Tunnel Canvas */
+        #aquarium-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Header & Dragon 9 Nonary Clock */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 40px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--glass-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, var(--aqua-cyan), var(--fern-emerald));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .dragon9-clock {
+            background: rgba(0, 12, 18, 0.85);
+            border: 1px solid var(--neon-gold);
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            letter-spacing: 1.5px;
+            color: var(--neon-gold);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.25);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .hero-section {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .hero-section h1 {
+            font-size: 2.9rem;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #ffffff, var(--aqua-cyan), var(--fern-emerald));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 25px rgba(0, 243, 255, 0.35);
+        }
+
+        .hero-section p {
+            font-size: 1.1rem;
+            color: #a5d6d0;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        /* Audio Reactor Console */
+        .audio-console {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+            backdrop-filter: blur(18px);
+            margin-bottom: 45px;
+            box-shadow: 0 12px 45px rgba(0, 0, 0, 0.65);
+            text-align: center;
+        }
+
+        .now-playing {
+            color: var(--fern-emerald);
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin: 10px 0 18px;
+            letter-spacing: 0.5px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--aqua-cyan), var(--fern-emerald));
+            color: #011418;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 0 18px rgba(0, 243, 255, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.85rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 28px rgba(0, 255, 136, 0.6);
+        }
+
+        button.secondary {
+            background: rgba(0, 243, 255, 0.12);
+            color: var(--aqua-cyan);
+            border: 1px solid var(--aqua-cyan);
+        }
+
+        button.secondary:hover {
+            background: var(--aqua-cyan);
+            color: #011418;
+        }
+
+        /* 9-Tier PayPal Checkout Grid */
+        .tier-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        .tier-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 26px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            backdrop-filter: blur(14px);
+        }
+
+        .tier-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--fern-emerald);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.2);
+        }
+
+        .tier-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .tier-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .tier-price {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--neon-gold);
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+        }
+
+        .tier-desc {
+            font-size: 0.94rem;
+            color: #b5ded8;
+            margin-bottom: 22px;
+            line-height: 1.55;
+        }
+
+        .checkout-btn {
+            display: block;
+            text-align: center;
+            background: transparent;
+            border: 2px solid var(--aqua-cyan);
+            color: var(--aqua-cyan);
+            padding: 11px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 800;
+            transition: all 0.25s ease;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .checkout-btn:hover {
+            background: var(--aqua-cyan);
+            color: var(--bg-abyss);
+            box-shadow: 0 0 22px var(--aqua-cyan);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Aquarium Tunnel WebGL Canvas -->
+    <div id="aquarium-canvas"></div>
+
+    <!-- Header & Dragon 9 Nonary Clock -->
+    <header>
+        <div class="logo">Fluid Motion TV // Dragon 9</div>
+        <div class="dragon9-clock" id="dragonClock">DRAGON 9: 00:00 (Cycle 1/9)</div>
+    </header>
+
+    <div class="container">
+        <!-- Hero -->
+        <section class="hero-section">
+            <h1>Sovereign Media &amp; 3D Ebook Vault</h1>
+            <p>Audio-reactive underwater botanical tunnel powered by the Dragon 9 54-minute harmonic protocol. Select a track below and secure your tier directly.</p>
+        </section>
+
+        <!-- MP3 Audio Reactor Console -->
+        <section class="audio-console">
+            <h3>Aquarium Frequency Reactor</h3>
+            <div class="now-playing" id="trackDisplay">Ready: Select "Raw Power" or "Dawns" MP3</div>
+            <div class="controls-row">
+                <button onclick="loadTrack('raw power.mp3', 'Raw Power (MP3)')">Play Raw Power.mp3</button>
+                <button onclick="loadTrack('dawns.mp3', 'Dawns (MP3)')">Play Dawns.mp3</button>
+                <button class="secondary" onclick="togglePlayPause()" id="playPauseBtn">Pause / Resume</button>
+            </div>
+        </section>
+
+        <!-- 9-Tier Sovereign PayPal Checkout Suite -->
+        <section class="tier-grid">
+            <!-- $9 Tier -->
+            <div class="tier-card">
+                <div>
+                    <div class="tier-header">
+                        <span class="tier-title">Fluid Motion Starter Asset</span>
+                        <span class="tier-price">$9</span>
+                    </div>
+                    <p class="tier-desc">1 digital copy of <em>The Guide to Sovereign Media</em> + 1 3D Ebook Mockup template.</p>
+                </div>
+                <a href="https://paypal.me/fluidmotiontv/9" target="_blank" class="checkout-btn">Secure Checkout ($9)</a>
+            </div>
+
+            <!-- $18 Tier -->
+            <div class="tier-card">
+                <div>
+                    <div class="tier-header">
+                        <span class="tier-title">Dragon 9 Quick-Win Template</span>
+                        <span class="tier-price">$18</span>
+                    </div>
+                    <p class="tier-desc">Dual-pack 3D ebook covers + digital copy of <em>The Guide to Sovereign Media</em>[cite: 1].</p>
+                </div>
+                <a href="https://paypal.me/fluidmotiontv/18" target="_blank" class="checkout-btn">Secure Checkout ($18)</a>
+            </div>
+
+            <!-- $54 Tier -->
+            <div class="tier-card">
+                <div>
+                    <div class="tier-header">
+                        <span class="tier-title">Complete Fluid Motion Toolkit</span>
+                        <span class="tier-price">$54</span>
+                    </div>
+                    <p class="tier-desc">Full 3D ebook baseline library + complete manuscript of <em>The Guide</em>[cite: 1].</p>
+                </div>
+                <a href="https://paypal.me/fluidmotiontv/54" target="_blank" class="checkout-btn">Secure Checkout ($54)</a>
+            </div>
+
+            <!-- $270 Tier -->
+            <div class="tier-card">
+                <div>
+                    <div class="tier-header">
+                        <span class="tier-title">Dragon 9 Pro Creator Suite</span>
+                        <span class="tier-price">$270</span>
+                    </div>
+                    <p class="tier-desc">3 Digital Copies of <em>The Guide</em> + advanced multi-format templates and node setup scripts[cite: 1].</p>
+                </div>
+                <a href="https://paypal.me/fluidmotiontv/270" target="_blank" class="checkout-btn">Secure Checkout ($270)</a>
+            </div>
+
+            <!-- $540 Tier -->
+            <div class="tier-card">
+                <div>
+                    <div class="tier-header">
+                        <span class="tier-title">Fluid Motion Masterclass</span>
+                        <span class="tier-price">$540</span>
+                    </div>
+                    <p class="tier-desc">5 Digital Copies of <em>The Guide</em> + intensive video training modules[cite: 1].</p>
+                </div>
+                <a href="https://paypal.me/fluidmotiontv/540" target="_blank" class="checkout-btn">Secure Checkout ($540)</a>
+            </div>
+
+            <!-- $810 Tier -->
+            <div class="tier-card">
+                <div>
+                    <div class="tier-header">
+                        <span class="tier-title">Dragon 9 Style Accelerator</span>
+                        <span class="tier-price">$810</span>
+                    </div>
+                    <p class="tier-desc">10 Digital Copies of <em>The Guide</em> + exclusive design vaults and community access pass[cite: 1].</p>
+                </div>
+                <a href="https://paypal.me/fluidmotiontv/810" target="_blank" class="checkout-btn">Secure Checkout ($810)</a>
+            </div>
+
+            <!-- $1,800 Tier -->
+            <div class="tier-card">
+                <div>
+                    <div class="tier-header">
+                        <span class="tier-title">Sovereign VIP Implementation</span>
+                        <span class="tier-price">$1,800</span>
+                    </div>
+                    <p class="tier-desc">25 Digital Copies + turnkey architecture blueprints and mesh network guides[cite: 1].</p>
+                </div>
+                <a href="https://paypal.me/fluidmotiontv/1800" target="_blank" class="checkout-btn">Secure Checkout ($1,800)</a>
+            </div>
+
+            <!-- $2,700 Tier -->
+            <div class="tier-card">
+                <div>
+                    <div class="tier-header">
+                        <span class="tier-title">Agency Licensing Pass</span>
+                        <span class="tier-price">$2,700</span>
+                    </div>
+                    <p class="tier-desc">Unlimited Reseller Licensing Rights + agency 3D rendering engines[cite: 1].</p>
+                </div>
+                <a href="https://paypal.me/fluidmotiontv/2700" target="_blank" class="checkout-btn">Secure Checkout ($2,700)</a>
+            </div>
+
+            <!-- $5,400 Tier -->
+            <div class="tier-card">
+                <div>
+                    <div class="tier-header">
+                        <span class="tier-title">Ultimate Done-For-You Ecosystem</span>
+                        <span class="tier-price">$5,400</span>
+                    </div>
+                    <p class="tier-desc">Custom white-label edition + bespoke 3D range built from scratch + sovereign ISP server deployment[cite: 1].</p>
+                </div>
+                <a href="https://paypal.me/fluidmotiontv/5400" target="_blank" class="checkout-btn">Secure Checkout ($5,400)</a>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // --- Dragon 9 Nonary Clock (54-Minute Harmonic Cycle) ---
+        function updateDragonClock() {
+            const now = new Date();
+            const totalMinutes = now.getHours() * 60 + now.getMinutes();
+            const cycleLength = 54;
+            const currentCycle = Math.floor((totalMinutes % (cycleLength * 9)) / cycleLength) + 1;
+            const hours = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+            const mins = String(totalMinutes % 60).padStart(2, '0');
+            document.getElementById('dragonClock').innerText = `DRAGON 9: ${hours}:${mins} (Cycle ${currentCycle}/9)`;
+        }
+        setInterval(updateDragonClock, 1000);
+        updateDragonClock();
+
+        // --- Three.js Realistic Aquarium Tunnel with Swaying Ferns & Bubbles ---
+        let scene, camera, renderer, composer, tunnelMesh, tunnelGeo, bubbles;
+        const ferns = [];
+        let audioCtx, analyser, dataArray, audioEl, sourceNode;
+
+        function initAquarium() {
+            const container = document.getElementById('aquarium-canvas');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x01161e, 0.018);
+
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 200);
+            camera.position.set(0, 0, 12);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Post-Processing Bloom for Bioluminescent Glow
+            const renderPass = new THREE.RenderPass(scene, camera);
+            const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.35, 0.5, 0.8);
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(renderPass);
+            composer.addPass(bloomPass);
+
+            // Aquarium Glass Cylinder Tunnel with Water Caustic Wireframe Overlay
+            tunnelGeo = new THREE.CylinderGeometry(14, 14, 140, 48, 60, true);
+            tunnelGeo.rotateX(Math.PI / 2);
+            const tunnelMat = new THREE.MeshStandardMaterial({
+                color: 0x00a8cc,
+                emissive: 0x004466,
+                emissiveIntensity: 0.4,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.28,
+                side: THREE.BackSide
+            });
+            tunnelMesh = new THREE.Mesh(tunnelGeo, tunnelMat);
+            scene.add(tunnelMesh);
+
+            // Populate Lush Aquatic Ferns Along Tunnel Walls
+            const frondMat = new THREE.MeshStandardMaterial({
+                color: 0x0b6e4f,
+                emissive: 0x00ff88,
+                emissiveIntensity: 0.22,
+                roughness: 0.4,
+                side: THREE.DoubleSide
+            });
+
+            for (let i = 0; i < 85; i++) {
+                const fernGroup = new THREE.Group();
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 13.4;
+                const zPos = (Math.random() - 0.5) * 120;
+
+                fernGroup.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, zPos);
+                fernGroup.rotation.z = angle + Math.PI / 2;
+
+                // Create multi-leaf fern cluster
+                for (let leaf = 0; leaf < 5; leaf++) {
+                    const leafGeo = new THREE.ConeGeometry(0.45, 3.8, 5);
+                    leafGeo.translate(0, 1.9, 0);
+                    const leafMesh = new THREE.Mesh(leafGeo, frondMat);
+                    leafMesh.rotation.z = (leaf - 2) * 0.28;
+                    leafMesh.rotation.x = (Math.random() - 0.5) * 0.4;
+                    fernGroup.add(leafMesh);
+                }
+
+                fernGroup.userData = { phase: Math.random() * Math.PI * 2, baseAngle: angle };
+                scene.add(fernGroup);
+                ferns.push(fernGroup);
+            }
+
+            // Rising Bioluminescent Bubbles
+            const bubbleCount = 350;
+            const bubbleGeo = new THREE.BufferGeometry();
+            const bubblePositions = new Float32Array(bubbleCount * 3);
+            for (let i = 0; i < bubbleCount * 3; i += 3) {
+                bubblePositions[i] = (Math.random() - 0.5) * 22;
+                bubblePositions[i + 1] = (Math.random() - 0.5) * 22;
+                bubblePositions[i + 2] = (Math.random() - 0.5) * 120;
+            }
+            bubbleGeo.setAttribute('position', new THREE.BufferAttribute(bubblePositions, 3));
+            const bubbleMat = new THREE.PointsMaterial({
+                color: 0x80ffea,
+                size: 0.28,
+                transparent: true,
+                opacity: 0.75
+            });
+            bubbles = new THREE.Points(bubbleGeo, bubbleMat);
+            scene.add(bubbles);
+
+            // Underwater Caustic Lighting
+            scene.add(new THREE.AmbientLight(0x004d66, 1.2));
+            const causticLight1 = new THREE.PointLight(0x00f3ff, 2.8, 90);
+            causticLight1.position.set(0, 8, -10);
+            scene.add(causticLight1);
+
+            const causticLight2 = new THREE.PointLight(0x00ff88, 2.2, 90);
+            causticLight2.position.set(0, -8, -30);
+            scene.add(causticLight2);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                composer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        // --- MP3 Audio Pipeline (raw power.mp3 & dawns.mp3) ---
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function loadTrack(filename, label) {
+            initAudio();
+            if (!audioEl) {
+                audioEl = new Audio();
+                audioEl.crossOrigin = "anonymous";
+                audioEl.loop = true;
+                sourceNode = audioCtx.createMediaElementSource(audioEl);
+                sourceNode.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            }
+            audioEl.src = filename;
+            audioEl.play()
+                .then(() => {
+                    document.getElementById('trackDisplay').innerText = `Now Streaming: ${label}`;
+                })
+                .catch(err => {
+                    document.getElementById('trackDisplay').innerText = `Loaded ${label} (Ensure ${filename} is in root folder)`;
+                    console.warn("Audio playback notice:", err);
+                });
+        }
+
+        function togglePlayPause() {
+            if (!audioEl || !audioEl.src) {
+                loadTrack('raw power.mp3', 'Raw Power (MP3)');
+                return;
+            }
+            if (audioEl.paused) {
+                audioCtx.resume();
+                audioEl.play();
+            } else {
+                audioEl.pause();
+            }
+        }
+
+        // --- Render & Audio-Reactive Animation Loop ---
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+
+            let bassEnergy = 0.25;
+            if (analyser && dataArray && audioEl && !audioEl.paused) {
+                analyser.getByteFrequencyData(dataArray);
+                let bassSum = 0;
+                for (let i = 0; i < 16; i++) bassSum += dataArray[i];
+                bassEnergy = 0.25 + (bassSum / 16) / 110;
+            }
+
+            // Gentle forward drift through the aquarium tunnel
+            tunnelMesh.rotation.z = Math.sin(t * 0.15) * 0.12;
+            tunnelMesh.material.emissiveIntensity = 0.3 + bassEnergy * 0.45;
+
+            // Swaying aquatic ferns reacting to underwater currents & audio bass
+            ferns.forEach(fern => {
+                fern.position.z += 0.08 * bassEnergy;
+                if (fern.position.z > 20) fern.position.z = -100;
+                const sway = Math.sin(t * 2.2 + fern.userData.phase) * 0.22 * bassEnergy;
+                fern.rotation.x = sway;
+            });
+
+            // Rising bubbles
+            const pos = bubbles.geometry.attributes.position.array;
+            for (let i = 1; i < pos.length; i += 3) {
+                pos[i] += 0.04 * bassEnergy;
+                if (pos[i] > 12) pos[i] = -12;
+            }
+            bubbles.geometry.attributes.position.needsUpdate = true;
+
+            composer.render();
+        }
+
+        initAquarium();
+        animate();
+    </script>
+</body>
+</html>
